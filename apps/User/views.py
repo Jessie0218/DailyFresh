@@ -9,6 +9,7 @@ from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from itsdangerous import SignatureExpired
 from django.http import HttpResponse
 from django.contrib.auth import authenticate, login, logout
+from celery_tasks.tasks import send_register_active_email
 
 
 # Create your views here.
@@ -42,16 +43,17 @@ class RegisterView(View):
         info = {'confirm': user.id}
         token = serializer.dumps(info)
         token = token.decode()
-        subject = 'DailyFresh'
-        message = ''
-        email_from = settings.EMAIL_FROM
-        receiver = [email]
-        html_message = """
-        <h1>%s, 欢迎您成为天天生鲜注册会员</h1>
-        请在一小时之内完成注册激活
-        <a href='http://127.0.0.1:8000/user/active/%s'>http://127.0.0.1:8000/user/active/%s</a>
-        """ % (username, token, token)
-        send_mail(subject, message, email_from, receiver, html_message=html_message)
+        # subject = 'DailyFresh'
+        # message = ''
+        # email_from = settings.EMAIL_FROM
+        # receiver = [email]
+        # html_message = """
+        # <h1>%s, 欢迎您成为天天生鲜注册会员</h1>
+        # 请在一小时之内完成注册激活
+        # <a href='http://127.0.0.1:8000/user/active/%s'>http://127.0.0.1:8000/user/active/%s</a>
+        # """ % (username, token, token)
+        # send_mail(subject, message, email_from, receiver, html_message=html_message)
+        send_register_active_email(email, username, token)
         return redirect(reverse('goods:index'))
 
 
@@ -102,5 +104,11 @@ class LoginView(View):
 
         else:
             return render(request, 'login.html', {'errormsg': '用户名或者密码错误'})
+
+
+class LogoutView(View):
+    def get(self, request):
+        logout(request)
+        return redirect(reverse('user:login'))
 
 
